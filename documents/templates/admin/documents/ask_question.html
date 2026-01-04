@@ -1,0 +1,123 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}پرسش از اسناد{% endblock %}
+
+{% block content %}
+<h1>پرسش و پاسخ از اسناد</h1>
+
+<div style="margin: 20px 0;">
+    <form method="post" id="question-form">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label for="question" style="display: block; margin-bottom: 5px; font-weight: bold;">
+                پرسش خود را وارد کنید:
+            </label>
+            <textarea 
+                id="question" 
+                name="question" 
+                rows="4" 
+                style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;"
+                placeholder="مثال: Django چیست و چگونه کار می‌کند؟"
+                required
+            >{% if question %}{{ question }}{% endif %}</textarea>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                انتخاب اسناد خاص (اختیاری - اگر خالی بگذارید، از تمام اسناد جستجو می‌شود):
+            </label>
+            <select 
+                name="document_ids" 
+                id="document_ids" 
+                multiple 
+                style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; min-height: 100px;"
+            >
+                {% for doc in all_documents %}
+                <option value="{{ doc.id }}" {% if doc.id|stringformat:"s" in request.POST.document_ids %}selected{% endif %}>
+                    {{ doc.title }}
+                </option>
+                {% endfor %}
+            </select>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                برای انتخاب چند سند، Ctrl (یا Cmd در Mac) را نگه دارید و کلیک کنید
+            </small>
+        </div>
+        
+        <button 
+            type="submit" 
+            style="background-color: #417690; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;"
+            onmouseover="this.style.backgroundColor='#205067'"
+            onmouseout="this.style.backgroundColor='#417690'"
+        >
+            ارسال پرسش
+        </button>
+    </form>
+</div>
+
+{% if success %}
+<div style="margin: 20px 0; padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">
+    <h2 style="margin-top: 0; color: #155724;">پاسخ:</h2>
+    
+    {% if llm_used %}
+    <div style="margin-bottom: 10px; padding: 8px; background-color: #cce5ff; border-radius: 3px; font-size: 12px;">
+        ✓ با استفاده از LLM تولید شده است
+    </div>
+    {% else %}
+    <div style="margin-bottom: 10px; padding: 8px; background-color: #fff3cd; border-radius: 3px; font-size: 12px;">
+        ⚠ بدون استفاده از LLM (پاسخ ساده)
+    </div>
+    {% endif %}
+    
+    <div style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; padding: 10px; background-color: white; border-radius: 3px;">
+        {{ answer }}
+    </div>
+    
+    {% if relevant_docs %}
+    <div style="margin-top: 20px;">
+        <h3 style="color: #155724;">اسناد مرتبط ({{ relevant_docs|length }}):</h3>
+        <ul style="list-style-type: none; padding: 0;">
+            {% for doc in relevant_docs %}
+            <li style="margin: 10px 0; padding: 10px; background-color: white; border-left: 4px solid #417690; border-radius: 3px;">
+                <strong>{{ doc.title }}</strong>
+                <br>
+                <small style="color: #666;">{{ doc.content|truncatewords:30 }}</small>
+                <br>
+                <a href="{% url 'admin:documents_document_change' doc.id %}" style="color: #417690; text-decoration: none;">
+                    مشاهده سند →
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if error %}
+<div style="margin: 20px 0; padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+    <strong>خطا:</strong> {{ error }}
+</div>
+{% endif %}
+
+<div style="margin-top: 30px; padding: 15px; background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">
+    <h3 style="margin-top: 0;">راهنمای استفاده:</h3>
+    <ul style="line-height: 1.8;">
+        <li>پرسش خود را به فارسی یا انگلیسی وارد کنید</li>
+        <li>می‌توانید اسناد خاصی را انتخاب کنید یا خالی بگذارید تا از تمام اسناد جستجو شود</li>
+        <li>سیستم به صورت خودکار مرتبط‌ترین اسناد را پیدا کرده و پاسخ تولید می‌کند</li>
+        <li>اگر LLM در دسترس باشد، پاسخ دقیق‌تری دریافت می‌کنید</li>
+    </ul>
+</div>
+
+<style>
+    #question-form {
+        max-width: 800px;
+    }
+    select[multiple] {
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
